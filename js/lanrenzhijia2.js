@@ -394,26 +394,58 @@
 			}
 		}
 	}
+	var maxBoxesOnScreen = 20; // 设置屏幕上箱子的最大数量
+	var cleanupThreshold = maxBoxesOnScreen * 2; // 设置清除箱子的阈值
+	var boxCreationInterval; // 用于储存定时器的ID
+
+	var drop = function () {
+		for (var i = 0; i < 10; i++) {
+			dropc++;
+			setTimeout(function() {
+				dropc--;
+				newBox(128 + (Math.random() * (scr.width - 256)), -Math.random() * 1000);
+			}, i * 800);
+		}
+	};
+
 	var clean = function () {
 		ctx.clearRect(0, 0, scr.width, scr.height);
-		for (var i = 0, rb; rb = objects[i++];) {
-			if (rb.pos[1] > scr.height) {
-				i--;
-				objects.splice(i, 1);
-			}
+
+		// 清除掉落出屏幕的箱子
+		objects = objects.filter(function(rb) {
+			return rb.pos[1] <= scr.height;
+		});
+
+		// 如果箱子数量超过阈值，删除多余的箱子
+		if (objects.length > cleanupThreshold) {
+			objects.sort(function(a, b) { return b.pos[1] - a.pos[1]; });
+			objects.length = maxBoxesOnScreen; // 保留最大数量的箱子
 		}
-		if (objects.length < 6 - dropc) drop();
-	}
+		
+		// 保证屏幕上始终有新的箱子掉落
+		while (objects.length < maxBoxesOnScreen && dropc <= 0) {
+			drop();
+		}
+	};
+
 	var newBox = function (x, y) {
-		if (!x) var x = pointer.X, y = 0;
-		var img = boxes[Math.floor(Math.random() * boxes.length)];
-		objects.push(
-			new Rectangle(img, x, y - img.height * 2, img.width, img.height, (img.width * img.height), Math.random() * 3 - 1.5)
-		);
-		setInterval(function() {
-			newBox(Math.random() * scr.width, 0);
-		}, 5000);
-	}
+		if (objects.length < maxBoxesOnScreen) {
+			if (x === undefined || y === undefined) {
+				x = Math.random() * scr.width;
+				y = 0;
+			}
+			var img = boxes[Math.floor(Math.random() * boxes.length)];
+			objects.push(
+				new Rectangle(img, x, y - img.height * 2, img.width, img.height, (img.width * img.height), Math.random() * 3 - 1.5)
+			);
+		}
+	};
+
+	var startBoxCreation = function () {
+		if (!boxCreationInterval) {
+			boxCreationInterval = setInterval(clean, 1000 / 60); // 每秒调用60次clean函数，模拟物理更新
+		}
+	};
 	var resize = function () {
 		// 清除无质量（不可移动）的对象
 		for (var i = 0, rb; rb = objects[i++];) {
@@ -435,16 +467,6 @@
 		objects.push(new Rectangle(false, scr.width * 0.5, scr.height, scr.width * 0.7, 4, 0, 0));
 	}
 	
-	
-	var drop = function () {
-		for (var i = 0; i < 10; i++) {
-			dropc++;
-			setTimeout(function() {
-				dropc--;
-				newBox(128 + (Math.random() * (scr.width - 256)), -Math.random() * 1000);
-			}, i * 600);
-		}
-	}
 	// ==== init script ====
 	var init = function () {
 		// ---- screen ----
@@ -471,6 +493,7 @@
 		kTimeStep = 1/60;
 		kGravity = 25;
 		kFriction = 0.3;
+		startBoxCreation();
 		run();
 	}
 	// ======== main loop ========
