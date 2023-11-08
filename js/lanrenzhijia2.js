@@ -410,6 +410,9 @@
 		objects.push(
 			new Rectangle(img, x, y - img.height * 2, img.width, img.height, (img.width * img.height), Math.random() * 3 - 1.5)
 		);
+		setInterval(function() {
+			newBox(Math.random() * scr.width, 0);
+		}, 5000);
 	}
 	var resize = function () {
 		// 清除无质量（不可移动）的对象
