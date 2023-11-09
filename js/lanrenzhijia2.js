@@ -394,7 +394,7 @@
 			}
 		}
 	}
-	var maxBoxesOnScreen = 20; // 设置屏幕上箱子的最大数量
+	var maxBoxesOnScreen = 25; // 设置屏幕上箱子的最大数量
 	var cleanupThreshold = maxBoxesOnScreen * 2; // 设置清除箱子的阈值
 	var boxCreationInterval; // 用于储存定时器的ID
 
@@ -430,15 +430,35 @@
 
 	var newBox = function (x, y) {
 		if (objects.length < maxBoxesOnScreen) {
-			if (x === undefined || y === undefined) {
-				x = Math.random() * scr.width;
-				y = 0;
+			// 创建一个不重复的箱子
+			var img;
+			var attempts = 0; // 避免无限循环
+			do {
+				img = boxes[Math.floor(Math.random() * boxes.length)];
+				attempts++;
+			} while (boxAlreadyExists(img) && attempts < boxes.length);
+	
+			if (attempts >= boxes.length) {
+				console.error("Unable to find a unique box. All types are on the screen.");
+				return; // 所有类型的箱子都已在屏幕上
 			}
-			var img = boxes[Math.floor(Math.random() * boxes.length)];
+	
+			// 如果 x 或 y 是 undefined，随机生成它们
+			x = x === undefined ? Math.random() * scr.width : x;
+			y = y === undefined ? 0 : y;
+	
+			// 创建一个新的Rectangle对象
 			objects.push(
 				new Rectangle(img, x, y - img.height * 2, img.width, img.height, (img.width * img.height), Math.random() * 3 - 1.5)
 			);
 		}
+	};
+	
+	// 检查特定类型的箱子是否已经存在
+	var boxAlreadyExists = function (img) {
+		return objects.some(function (obj) {
+			return obj.img === img; // 这里假设Rectangle对象存储了img属性
+		});
 	};
 
 	var startBoxCreation = function () {
@@ -446,26 +466,6 @@
 			boxCreationInterval = setInterval(clean, 1000 / 60); // 每秒调用60次clean函数，模拟物理更新
 		}
 	};
-	var resize = function () {
-		// 清除无质量（不可移动）的对象
-		for (var i = 0, rb; rb = objects[i++];) {
-			if (!rb.invMass) {
-				i--;
-				objects.splice(i, 1);
-			}
-		}
-	
-		// 获取第一张图像并在右侧创建一个 Rectangle 对象
-		var imgRight = document.getElementById("blade");
-		objects.push(new Rectangle(imgRight, scr.width * 0.9, scr.height * 0.9, imgRight.width, imgRight.height, 0, 1, 0));
-	
-		// 获取第二张图像并在左侧创建一个 Rectangle 对象
-		var imgLeft = document.getElementById("blade1");
-		objects.push(new Rectangle(imgLeft, scr.width * 0.1, scr.height * 0.9, imgLeft.width, imgLeft.height, 0, 1, 0));
-	
-		// 添加地板 Rectangle 对象
-		objects.push(new Rectangle(false, scr.width * 0.5, scr.height, scr.width * 0.7, 4, 0, 0));
-	}
 	
 	// ==== init script ====
 	var init = function () {
@@ -494,6 +494,7 @@
 		kGravity = 25;
 		kFriction = 0.3;
 		startBoxCreation();
+		boxAlreadyExists();
 		run();
 	}
 	// ======== main loop ========
@@ -506,6 +507,26 @@
 		draw();
 		// ---- animation loop ----
 		requestAnimFrame(run);
+	}
+	var resize = function () {
+		// 清除无质量（不可移动）的对象
+		for (var i = 0, rb; rb = objects[i++];) {
+			if (!rb.invMass) {
+				i--;
+				objects.splice(i, 1);
+			}
+		}
+	
+		// 获取第一张图像并在右侧创建一个 Rectangle 对象
+		var imgRight = document.getElementById("blade");
+		objects.push(new Rectangle(imgRight, scr.width * 0.9, scr.height * 0.9, imgRight.width, imgRight.height, 0, 1, 0));
+	
+		// 获取第二张图像并在左侧创建一个 Rectangle 对象
+		var imgLeft = document.getElementById("blade1");
+		objects.push(new Rectangle(imgLeft, scr.width * 0.1, scr.height * 0.9, imgLeft.width, imgLeft.height, 0, 1, 0));
+	
+		// 添加地板 Rectangle 对象
+		objects.push(new Rectangle(false, scr.width * 0.5, scr.height, scr.width * 0.7, 4, 0, 0));
 	}
 	return {
 		// ---- onload event ----
